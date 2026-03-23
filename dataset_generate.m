@@ -1,6 +1,6 @@
 clear all; close all; clc; 
 %% Master Dataset Generator for Nalanchira Project
-num_simulations = 10; % Change to 1000 for final run
+num_simulations = 2; % Change to 1000 for final run
 model_name = 'Nalanchira_RMU_';
 
 % Load model into memory
@@ -10,17 +10,20 @@ set_param(model_name, 'Dirty', 'off');
 All_Results = cell(num_simulations, 1); 
 h = waitbar(0, 'Initializing Simulations...');
 
+% Define the Mapping (Index 1-15 maps to these Location IDs)
+temp_map = [101, 101, 102, 102, 103, 104, 104, 105, 106, 107, 108, 109, 110, 111, 112];
+
 for i = 1:num_simulations
-    % 1. Randomize parameters locally in the script
+    % 1. Randomize parameters
     current_fault_id = randi([1, 15]);
-    current_start    = 0.3 + (0.4 * rand); % Start between 0.3 and 0.7
-    current_duration = 0.3 + (0.1 * rand); % Duration between 0.3 and 0.4
+    current_start    = 0.3 + (0.4 * rand); 
+    current_duration = 0.3 + (0.1 * rand); 
     
     % 2. Configure Simulation Input
     simIn = Simulink.SimulationInput(model_name);
     simIn = simIn.setModelParameter('StopTime', '1');
     
-    % Inject these specific variables into the model's workspace
+    % Inject variables into Constant Blocks
     simIn = simIn.setVariable('cfg_fault_id', current_fault_id);
     simIn = simIn.setVariable('cfg_start', current_start);
     simIn = simIn.setVariable('cfg_duration', current_duration);
@@ -29,13 +32,15 @@ for i = 1:num_simulations
     try
         simOut = sim(simIn); 
         
-        % 4. Fix Dimension Mismatch
-        % Get length of voltage signal (e.g., 20001 points)
+        % 4. Fix Dimension Mismatch & Assign Dynamic Location
         num_pts = length(simOut.Va_grid1);
         
-        % Create columns for labels that match waveform length
+        % Get the specific location for this fault ID
+        current_location = temp_map(current_fault_id);
+        
+        % Create columns that match waveform length
         f_type_col = ones(num_pts, 1) * current_fault_id;
-        f_loc_col  = ones(num_pts, 1) * 101; % Example location ID
+        f_loc_col  = ones(num_pts, 1) * current_location; % <--- FIXED HERE
         
         % Combine Waveforms + Labels
         temp_matrix = [ ...
@@ -68,5 +73,5 @@ if ~isempty(All_Data)
     ANN_Table = array2table(All_Data, 'VariableNames', Column_Names);
     writetable(ANN_Table, 'Nalanchira_Dataset.csv');
     save('Nalanchira_Dataset.mat', 'ANN_Table');
-    disp('Success! CSV and MAT files generated.');
+    disp('Success! Dataset shows varied Locations.');
 end
