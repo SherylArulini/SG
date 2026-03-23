@@ -1,7 +1,7 @@
 clear all; close all; clc; 
 
 %% Master Dataset Generator for Nalanchira Project
-num_simulations = 3; 
+num_simulations = 2; 
 model_name = 'Nalanchira_RMU_';
 load_system(model_name); % Load model into memory without opening window
 
