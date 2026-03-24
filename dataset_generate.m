@@ -1,6 +1,6 @@
 clear all; close all; clc; 
-%% Master Dataset Generator for Nalanchira Project
-num_simulations = 2; % Change to 1000 for final run
+%% Master Dataset Generator 
+num_simulations = 2; 
 model_name = 'Nalanchira_RMU_';
 
 % Load model into memory
@@ -32,17 +32,14 @@ for i = 1:num_simulations
     try
         simOut = sim(simIn); 
         
-        % 4. Fix Dimension Mismatch & Assign Dynamic Location
+        % 4. Data Extraction
         num_pts = length(simOut.Va_grid1);
-        
-        % Get the specific location for this fault ID
         current_location = temp_map(current_fault_id);
         
-        % Create columns that match waveform length
         f_type_col = ones(num_pts, 1) * current_fault_id;
-        f_loc_col  = ones(num_pts, 1) * current_location; % <--- FIXED HERE
+        f_loc_col  = ones(num_pts, 1) * current_location;
         
-        % Combine Waveforms + Labels
+        % Combine all 24 signals + 2 labels
         temp_matrix = [ ...
             simOut.Va_grid1, simOut.Vb_grid1, simOut.Vc_grid1, simOut.Ia_grid1, simOut.Ib_grid1, simOut.Ic_grid1, ...
             simOut.Va_grid2, simOut.Vb_grid2, simOut.Vc_grid2, simOut.Ia_grid2, simOut.Ib_grid2, simOut.Ic_grid2, ...
@@ -56,22 +53,31 @@ for i = 1:num_simulations
         fprintf('Sim %d failed: %s\n', i, ME.message);
     end
     
-    waitbar(i/num_simulations, h, sprintf('Simulation %d of %d...', i, num_simulations));
+    waitbar(i/num_simulations, h, sprintf('Progress: %d of %d simulations...', i, num_simulations));
 end
 close(h);
 
-%% 5. Save Data
+%% 5. Table Conversion and Export
+% Combine all simulations into one large matrix
 All_Data = cell2mat(All_Results); 
+
 if ~isempty(All_Data)
+    % Define precise Column Names
     Column_Names = { ...
         'Va_G1','Vb_G1','Vc_G1','Ia_G1','Ib_G1','Ic_G1', ...
         'Va_G2','Vb_G2','Vc_G2','Ia_G2','Ib_G2','Ic_G2', ...
         'Va_Hos','Vb_Hos','Vc_Hos','Ia_Hos','Ib_Hos','Ic_Hos', ...
         'Va_Res','Vb_Res','Vc_Res','Ia_Res','Ib_Res','Ic_Res', ...
         'Fault_Type','Location'};
-        
+    
+    % Convert matrix to table to include headers
     ANN_Table = array2table(All_Data, 'VariableNames', Column_Names);
-    writetable(ANN_Table, 'Nalanchira_Dataset.csv');
-    save('Nalanchira_Dataset.mat', 'ANN_Table');
-    disp('Success! Dataset shows varied Locations.');
+    
+    % Save to both CSV and MAT formats
+    writetable(ANN_Table, 'Nalanchira_Master_Dataset.csv');
+    save('Nalanchira_Master_Dataset.mat', 'ANN_Table');
+    
+    disp('Success! Dataset generated with full headers.');
+    % Preview the first few rows
+    head(ANN_Table) 
 end
