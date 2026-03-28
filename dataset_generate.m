@@ -1,7 +1,6 @@
 clear all; close all; clc; 
-
 %% Master Dataset Generator 
-num_simulations = 1; 
+num_simulations = 100; % Increase this for your full run
 model_name = 'Nalanchira_RMU_';
 load_system(model_name);
 set_param(model_name, 'Dirty', 'off');
@@ -12,15 +11,21 @@ temp_map = [101, 101, 102, 102, 103, 104, 104, 105, 106, 107, 108, 109, 110, 111
 ds = 20;
 
 for i = 1:num_simulations
+    % 1. INITIALIZE the simIn object FIRST
+    simIn = Simulink.SimulationInput(model_name);
+    
+    % 2. Generate random parameters
     current_fault_id = randi([1, 15]);
     current_start    = 0.3 + (0.4 * rand); 
     current_duration = 0.3 + (0.1 * rand); 
+    random_phase     = rand * 360; % Point-on-wave variation
     
-    simIn = Simulink.SimulationInput(model_name);
+    % 3. Set variables in the simulation input
     simIn = simIn.setModelParameter('StopTime', '1');
     simIn = simIn.setVariable('cfg_fault_id', current_fault_id);
     simIn = simIn.setVariable('cfg_start', current_start);
     simIn = simIn.setVariable('cfg_duration', current_duration);
+    simIn = simIn.setVariable('cfg_source_phase', random_phase); 
     
     try
         simOut = sim(simIn); 
@@ -57,29 +62,36 @@ for i = 1:num_simulations
 
         sigs_ds = cellfun(extract, sigs, 'UniformOutput', false);
         min_len = min(cellfun(@length, sigs_ds));
-        num_signals = numel(sigs_ds); % Ensure this is a scalar
+        num_signals = numel(sigs_ds); 
         
-        % Corrected Matrix Initialization
         final_matrix = zeros(min_len, num_signals); 
-        
         for j = 1:num_signals
             temp_sig = sigs_ds{j};
             final_matrix(:, j) = temp_sig(1:min_len);
         end
         
+        % Correct identification of fault type and location
         current_location = temp_map(current_fault_id);
-        All_Results{i} = single([final_matrix, ones(min_len, 1)*current_fault_id, ones(min_len, 1)*current_location]);
+        
+        % Create columns for Fault_Type and Location
+        f_type_col = ones(min_len, 1) * current_fault_id;
+        f_loc_col  = ones(min_len, 1) * current_location;
+        
+        All_Results{i} = single([final_matrix, f_type_col, f_loc_col]);
         
     catch ME
         fprintf('Sim %d failed: %s\n', i, ME.message);
     end
-    waitbar(i/num_simulations, h, 'Simulating...');
+    waitbar(i/num_simulations, h, sprintf('Simulating %d of %d...', i, num_simulations));
 end
 close(h);
 
 %% Export
-if ~cellfun(@isempty, All_Results)
-    All_Data = cell2mat(All_Results);
+valid_results = ~cellfun(@isempty, All_Results);
+if any(valid_results)
+    All_Data = cell2mat(All_Results(valid_results));
+    
+    % Headers must match the sigs order exactly
     Column_Names = { ...
         'Va_G1','Vb_G1','Vc_G1','Ia_G1','Ib_G1','Ic_G1', ...
         'VM_G1P','VM_G1N','VM_G1Z','VP_G1P','VP_G1N','VP_G1Z', ...
@@ -98,7 +110,7 @@ if ~cellfun(@isempty, All_Results)
     ANN_Table = array2table(All_Data, 'VariableNames', Column_Names);
     writetable(ANN_Table, 'Nalanchira_Master_Dataset.csv');
     save('Nalanchira_Master_Dataset.mat', 'ANN_Table', '-v7.3');
-    disp('Success!');
+    disp('Success! Dataset generated with Point-on-Wave variations.');
 else
-    disp('All simulations failed. Check that your "To Workspace" variable names exactly match the script.');
+    disp('Extraction failed. Check the Command Window for specific Simulink errors.');
 end
