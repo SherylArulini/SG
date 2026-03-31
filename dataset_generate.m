@@ -1,6 +1,6 @@
 clear all; close all; clc; 
 %% Master Dataset Generator 
-num_simulations = 1; % Increase this for your full run
+num_simulations = 2; 
 model_name = 'Nalanchira_RMU_';
 load_system(model_name);
 set_param(model_name, 'Dirty', 'off');
@@ -81,6 +81,8 @@ for i = 1:num_simulations
        % f_loc_col  = ones(min_len, 1) * current_location;
         
         %All_Results{i} = single([final_matrix, f_type_col, f_loc_col]);
+        run_id_col = ones(min_len, 1, 'single') * i;
+        All_Results{i} = single([run_id_col, final_matrix]);
         All_Results{i} = single(final_matrix);
         
     catch ME
@@ -97,6 +99,7 @@ if any(valid_results)
     
     % Headers must match the sigs order exactly
     Column_Names = { ...
+        'Run_ID', ...
         'Va_G1','Vb_G1','Vc_G1','Ia_G1','Ib_G1','Ic_G1', ...
         'VM_G1P','VM_G1N','VM_G1Z','VP_G1P','VP_G1N','VP_G1Z', ...
         'IM_G1P','IM_G1N','IM_G1Z','IP_G1P','IP_G1N','IP_G1Z', ...
