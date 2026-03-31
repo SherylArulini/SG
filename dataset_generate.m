@@ -1,6 +1,6 @@
 clear all; close all; clc; 
 %% Master Dataset Generator 
-num_simulations = 1300; % Increase this for your full run
+num_simulations = 1; % Increase this for your full run
 model_name = 'Nalanchira_RMU_';
 load_system(model_name);
 set_param(model_name, 'Dirty', 'off');
@@ -57,7 +57,10 @@ for i = 1:num_simulations
             simOut.VMag_res_pos, simOut.VMag_res_neg, simOut.VMag_res_zero, ...
             simOut.VPh_res_pos, simOut.VPh_res_neg, simOut.VPh_res_zero, ...
             simOut.IMag_res_pos, simOut.IMag_res_neg, simOut.IMag_res_zero, ...
-            simOut.IPh_res_pos, simOut.IPh_res_neg, simOut.IPh_res_zero ...
+            simOut.IPh_res_pos, simOut.IPh_res_neg, simOut.IPh_res_zero, ...
+            simOut.Fault_Present, ... 
+            simOut.Fault_Type, ...
+            simOut.Fault_Location...
         };
 
         sigs_ds = cellfun(extract, sigs, 'UniformOutput', false);
@@ -71,13 +74,14 @@ for i = 1:num_simulations
         end
         
         % Correct identification of fault type and location
-        current_location = temp_map(current_fault_id);
+        %current_location = temp_map(current_fault_id);
         
         % Create columns for Fault_Type and Location
-        f_type_col = ones(min_len, 1) * current_fault_id;
-        f_loc_col  = ones(min_len, 1) * current_location;
+       % f_type_col = ones(min_len, 1) * current_fault_id;
+       % f_loc_col  = ones(min_len, 1) * current_location;
         
-        All_Results{i} = single([final_matrix, f_type_col, f_loc_col]);
+        %All_Results{i} = single([final_matrix, f_type_col, f_loc_col]);
+        All_Results{i} = single(final_matrix);
         
     catch ME
         fprintf('Sim %d failed: %s\n', i, ME.message);
@@ -105,7 +109,7 @@ if any(valid_results)
         'Va_Res','Vb_Res','Vc_Res','Ia_Res','Ib_Res','Ic_Res', ...
         'VM_ResP','VM_ResN','VM_ResZ','VP_ResP','VP_ResN','VP_ResZ', ...
         'IM_ResP','IM_ResN','IM_ResZ','IP_ResP','IP_ResN','IP_ResZ', ...
-        'Fault_Type','Location'};
+        'Fault_Active','Fault_Type','Location'};
     
     ANN_Table = array2table(All_Data, 'VariableNames', Column_Names);
     writetable(ANN_Table, 'Nalanchira_Master_Dataset.csv');
