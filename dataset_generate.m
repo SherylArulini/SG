@@ -1,6 +1,6 @@
 clear all; close all; clc; 
 %% Master Dataset Generator 
-num_simulations = 100; % Increase this for your full run
+num_simulations = 1300; % Increase this for your full run
 model_name = 'Nalanchira_RMU_';
 load_system(model_name);
 set_param(model_name, 'Dirty', 'off');
