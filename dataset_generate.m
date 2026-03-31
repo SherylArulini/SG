@@ -83,7 +83,7 @@ for i = 1:num_simulations
         %All_Results{i} = single([final_matrix, f_type_col, f_loc_col]);
         run_id_col = ones(min_len, 1, 'single') * i;
         All_Results{i} = single([run_id_col, final_matrix]);
-        All_Results{i} = single(final_matrix);
+       % All_Results{i} = single(final_matrix);
         
     catch ME
         fprintf('Sim %d failed: %s\n', i, ME.message);
